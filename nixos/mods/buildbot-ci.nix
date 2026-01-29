@@ -182,6 +182,24 @@ in
     };
 
     # =========================================================================
+    # oauth2-proxy scope override
+    # =========================================================================
+    # buildbot-nix hardcodes scope="read:user user:email repo" which requests
+    # excessive permissions (full repo access). We only need user identity.
+    # Override the preStart script to use minimal scopes.
+    systemd.services.oauth2-proxy.preStart = lib.mkForce ''
+      (
+        umask 0077
+        cat > "$CONFIGURATION_DIRECTORY/oauth2-proxy.toml" <<EOF
+      client_secret = "$(cat "$CREDENTIALS_DIRECTORY/client-secret")"
+      cookie_secret = "$(cat "$CREDENTIALS_DIRECTORY/cookie-secret")"
+      basic_auth_password = "$(cat "$CREDENTIALS_DIRECTORY/basic-auth-password")"
+      scope = "read:user user:email"
+      EOF
+      )
+    '';
+
+    # =========================================================================
     # Secrets
     # =========================================================================
     sops.secrets = {
